@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -9,6 +10,7 @@ public class PlayerInputHandler : MonoBehaviour
     public bool jumpPressed { get; private set; }
     public bool jumpHeld { get; private set; }
     public bool sprintHeld { get; private set; }
+    public bool cameraMoving { get; private set; }
 
     private void Awake()
     {
@@ -22,10 +24,23 @@ public class PlayerInputHandler : MonoBehaviour
             controls = new PlayerInputActions();
 
         controls.Movement.Enable();
+        controls.Camera.Enable();
         controls.Movement.Jump.started += OnJumpStarted;
         controls.Movement.Jump.canceled += OnJumpCanceled;
         controls.Movement.Sprint.started += OnSprintStarted;
         controls.Movement.Sprint.canceled += OnSprintCanceled;
+        controls.Camera.CameraMove.started += OnCameraMoveStarted;
+        controls.Camera.CameraMove.canceled += OnCameraMoveCancelled;
+    }
+
+    private void OnCameraMoveCancelled(InputAction.CallbackContext context)
+    {
+        throw new NotImplementedException();
+    }
+
+    private void OnCameraMoveStarted(InputAction.CallbackContext context)
+    {
+        throw new NotImplementedException();
     }
 
     private void OnDisable()
@@ -34,7 +49,10 @@ public class PlayerInputHandler : MonoBehaviour
         controls.Movement.Jump.canceled -= OnJumpCanceled;
         controls.Movement.Sprint.started -= OnSprintStarted;
         controls.Movement.Sprint.canceled -= OnSprintCanceled;
+        controls.Camera.CameraMove.started -= OnCameraMoveStarted;
+        controls.Camera.CameraMove.canceled -= OnCameraMoveCancelled;
         controls.Movement.Disable();
+        controls.Camera.Disable();
     }
 
     private void Update()

@@ -1,362 +1,467 @@
+
+using Unity.Cinemachine;
 using UnityEngine;
 
-[RequireComponent(typeof(PlayerInputHandler))]
-[RequireComponent(typeof(CharacterController))]
+public enum MovementState
+{
+    Grounded,
+    Airborne,
+    Climbing,
+    Sliding,
+    Hanging,
+}
+
 public class PlayerMovement : MonoBehaviour
 {
-    [Header("Movement")]
-    public float maxSpeed = 8f;
-    public float acceleration = 40f;
-    public float deceleration = 60f;
-    public float airControlMultiplier = 0.4f;
+    [Header("Essentials")]
+    PlayerInputHandler inputHandler;
+    CharacterController controller;
+    public MovementState currentState = MovementState.Grounded;
 
-    [Header("Sprint")]
-    public float sprintMultiplier = 1.6f;
+
+    [Header("Player Rotation")]
+    Vector2 inputToRotate;
+    public float rotationSpeed;
+    private bool isPivotingOnSpot;
+
+    [Header("Camera")]
+    public CinemachineCamera playerCamera;
+    
+
+    [Header("LayerMasks")]
+    public LayerMask climbable;
+
+    [Header("Move")]
+    public float moveSpeedMax = 15f;
+    public float airSpeedMax = 7f;
+    private float currentMaxSpeed;
+    private float currentSmoothTime;
+    private Vector3 smoothMoveVelocity;
+    private Vector3 movementHorizontal;
+    public float smoothTime = 0.15f;
+    public float airSmoothTime = 1f;
+    private Vector3 finalMovement;
+
+    [Header("Gravity")]
+    public float playerVerticalVelocity;
+    public float gravitationalAcceleration;
+    public float gravityMax;
+    public float groundedVerticalVelocity;
+    public Vector3 sphereCastOffsetCeiling;
+    public float sphereCastHeightCeiling;
 
     [Header("Jump")]
-    public float jumpHeight = 2f;
-    public float gravity = -25f;
-    public float lowJumpMultiplier = 2.5f;
-    public float fallGravityMultiplier = 1.8f;
-    public float coyoteTime = 0.12f;
-    public float jumpBufferTime = 0.12f;
-
-    [Header("Double Jump")]
-    public int maxJumps = 2;
-    private int jumpsRemaining;
-
-    [Header("Wall Climb")]
-    public float wallClimbSpeed = 12f;
-    public float wallSlideSpeed = 1.5f;
-    public float wallClimbDuration = 1.5f;
-    public float wallJumpHorizontalForce = 8f;
-    public float wallJumpVerticalForce = 10f;
-    public float wallCheckDistance = 0.6f;
-
-    // wall state booleans — were missing, caused all the errors
-    private bool isTouchingWall;
-    private bool isWallClimbing;
-    private bool isWallHanging;
-    private Vector3 wallNormal;
-    private float wallClimbTimer;
-    private Vector3 lastWallNormal; // stores the normal of the wall that was jumped from
-
-    [Header("Wall Climb Feel")]
-    public float wallAttachCooldown = 0.2f;
-    public float wallJumpControlLockDuration = 0.2f;
-    public float wallClimbSpeedRampUp = 2f;
-    public float wallSlideSpeedRampUp = 1f;
-    public float wallJumpBoostWindow = 0.1f;
-    public float wallDetachInputThreshold = 0.8f;
-    public float wallAutoClimbDelay = 0.4f;
-    public float wallHoldDuration = 1.2f;
-
-    private float wallAutoClimbTimer;
-    private float wallHoldTimer;
-    private bool wallAutoClimbActive;
-    private float wallAttachCooldownTimer;
-    private float wallJumpControlLockTimer;
-    private float wallCoyoteTimer;
-    private float currentWallClimbSpeed;
-    private float currentWallSlideSpeed;
-    private bool wasOnWallLastFrame;
-    public float wallSlideAcceleration = 6f; // how fast slide speed ramps up toward freefall
-
-    private PlayerInputHandler input;
-    private CharacterController controller;
-
-    private float coyoteTimer;
+    public float jumpPower;
+    public int jumpRemaining = 2;
+    public float jumpPowerModifier = 70f;
+    public bool jumpTimerGoing;
     private float jumpBufferTimer;
-    private Vector3 velocity;
-    private Vector3 horizontalVelocity;
+    private const float JUMP_BUFFER_DURATION = 0.2f;
 
-    private void Awake()
+    [Header("Wall Jump")]
+    public bool wallNearby;
+    public float sphereCastOffsetWall;
+    public float sphereCastForwardWall;
+    public float sphereRadius;
+    private Vector3 pureHorizontalNormal;
+    public float wallJumpMultiplier;
+    private float wallJumpLockoutTimer;
+    private const float WALL_JUMP_LOCKOUT_DURATION = 0.25f;
+
+
+    [Header("Climb")]
+    public float climbSpeedMax;
+    public float climbTimer;
+    private float currentClimbTime;
+    public float climbSmoothTime;
+    public bool runningTowardsWall;
+
+    [Header("Slide")]
+    public float slideSpeedMax;
+    public float slideSmoothTime;
+
+    [Header("Ledge")]
+    public bool canHang;
+    public bool ledgeNearby;
+    public float ledgeOffset = 0.1f;
+    public float sphereCastLedgeHeight;
+    public float ledgeRadius;
+    public Vector3 sphereCastOffsetLedge;
+    private float ledgeJumpLockoutTimer;
+    private const float LEDGE_JUMP_LOCKOUT_DURATION = 0.25f;
+
+
+    public float ledgeCheckLowerHeight = 0.8f;   // roughly waist height relative to controller center
+    public float ledgeCheckUpperHeight = 2.2f;   // roughly above head height
+    public float ledgeCheckForwardDistance = 0.6f;
+    public float ledgeSurfaceMaxNormalAngle = 45f;
+    private void Start()
     {
-        input = GetComponent<PlayerInputHandler>();
+        ledgeCheckUpperHeight = controller.height * 0.95f;
+        currentClimbTime = climbTimer;
+        inputHandler = GetComponent<PlayerInputHandler>();
         controller = GetComponent<CharacterController>();
-        wallClimbTimer = wallClimbDuration;
-        wallHoldTimer = wallHoldDuration;
     }
-
-    private void Update()
+    private void FixedUpdate()
     {
-        DetectWall();
-        HandleTimers();
-        HandleWallClimb();
-        HandleJump();
-        ApplyGravity();
-        HandleMove();
+        
 
-        controller.Move((horizontalVelocity + Vector3.up * velocity.y) * Time.deltaTime);
-    }
-
-    private void DetectWall()
-    {
-        wasOnWallLastFrame = isTouchingWall;
-
-        Vector3[] directions = { transform.forward, -transform.forward, transform.right, -transform.right };
-        isTouchingWall = false;
-
-        foreach (var dir in directions)
+        if (inputHandler.jumpPressed)
         {
-            if (Physics.SphereCast(transform.position, 0.3f, dir, out RaycastHit hit, wallCheckDistance))
-            {
-                if (Mathf.Abs(hit.normal.y) < 0.3f)
+            inputHandler.ConsumeJumpPress();
+            jumpBufferTimer = JUMP_BUFFER_DURATION;
+            jumpTimerGoing = true;
+        }
+        Timers();
+
+        WallDetection();
+        
+        
+        StateHandler();
+        
+    }
+    private void Timers()
+    {
+        if (wallJumpLockoutTimer > 0f)
+        {
+            wallJumpLockoutTimer -= Time.fixedDeltaTime;
+        }
+
+        if(ledgeJumpLockoutTimer > 0f)
+        {
+            ledgeJumpLockoutTimer -= Time.fixedDeltaTime;
+        }
+
+        if (jumpBufferTimer > 0)
+        {
+            jumpTimerGoing = true;
+            jumpBufferTimer -= Time.fixedDeltaTime;
+        }
+        else if(jumpBufferTimer <=0)
+        {
+
+            jumpBufferTimer = 0f;
+            jumpTimerGoing = false;
+            
+        }
+    }
+    private void StateHandler()
+    {
+        switch (currentState)
+        {
+            case MovementState.Grounded:
+                currentMaxSpeed = moveSpeedMax;
+                currentSmoothTime = smoothTime;
+                currentClimbTime = climbTimer;
+                jumpRemaining = 2;
+                playerVerticalVelocity = groundedVerticalVelocity;
+                //holding jump button determines the power
+                if (inputHandler.jumpHeld && jumpPower < 0.1f)
                 {
-                    bool isSameWall = Vector3.Dot(hit.normal, lastWallNormal) > 0.9f;
+                    jumpPower += Time.fixedDeltaTime;
+                }
 
-                    if (isSameWall && wallAttachCooldownTimer > 0f)
-                        continue;
+                bool releasedEarly = !inputHandler.jumpHeld && jumpPower > 0.001f;
+                bool reachedMaxCharge = jumpPower >= 0.1f;
 
-                    // Fresh wall attachment — different wall than last one
-                    bool isNewWall = Vector3.Dot(hit.normal, wallNormal) < 0.9f;
-
-                    if (isNewWall && !wasOnWallLastFrame)
-                    {
-                        // Reset all climb state so climb restarts from scratch
-                        wallClimbTimer = wallClimbDuration;
-                        wallAutoClimbTimer = 0f;
-                        wallAutoClimbActive = false;
-                        currentWallClimbSpeed = 0f;
-                        currentWallSlideSpeed = 0f;
-                        isWallClimbing = false;
-                        isWallHanging = false;
-                    }
-
-                    isTouchingWall = true;
-                    wallNormal = hit.normal;
+                //check for jump buffer
+                if (jumpTimerGoing && !inputHandler.jumpHeld && jumpPower < 0.001f)
+                {
+                    
+                    inputHandler.ConsumeJumpPress();
+                    jumpRemaining = 1;
+                    playerVerticalVelocity = 0.20f * jumpPowerModifier; 
+                    jumpPower = 0f;
+                    currentState = MovementState.Airborne;
+                    jumpBufferTimer = 0f;
+                    jumpTimerGoing = false;
                     break;
                 }
-            }
-        }
-
-        if (wasOnWallLastFrame && !isTouchingWall)
-            wallCoyoteTimer = wallJumpBoostWindow;
-    }
-
-    private void HandleWallClimb()
-    {
-        if (controller.isGrounded)
-        {
-            wallClimbTimer = wallClimbDuration;
-            wallAutoClimbTimer = 0f;
-            wallHoldTimer = wallHoldDuration;
-            wallAutoClimbActive = false;
-            isWallClimbing = false;
-            isWallHanging = false;
-            currentWallClimbSpeed = 0f;
-            currentWallSlideSpeed = 0f;
-            return;
-        }
-
-        if (!isTouchingWall)
-        {
-            wallAutoClimbTimer = 0f;
-            wallAutoClimbActive = false;
-            isWallClimbing = false;
-            isWallHanging = false;
-            currentWallClimbSpeed = 0f;
-            return;
-        }
-
-        // Intentional detach — player pushes hard away from wall
-        Vector2 moveInput = input.moveInput;
-        Vector3 inputDir = new Vector3(moveInput.x, 0f, moveInput.y);
-        float awayDot = Vector3.Dot(inputDir, wallNormal);
-
-        if (awayDot > wallDetachInputThreshold)
-        {
-            isWallClimbing = false;
-            isWallHanging = false;
-            wallAttachCooldownTimer = wallAttachCooldown;
-            wallAutoClimbActive = false;
-            wallAutoClimbTimer = 0f;
-            return;
-        }
-
-        // Phase 1 — Hold: brief hang before auto climb kicks in
-        if (!wallAutoClimbActive)
-        {
-            isWallClimbing = false;
-            isWallHanging = true;
-
-            wallAutoClimbTimer += Time.deltaTime;
-
-            if (wallAutoClimbTimer >= wallAutoClimbDelay)
-                wallAutoClimbActive = true;
-
-            return;
-        }
-
-        // Phase 2 — Active climb: auto climbing, stamina draining
-        if (wallClimbTimer > 0f)
-        {
-            isWallClimbing = true;
-            isWallHanging = false;
-            wallClimbTimer -= Time.deltaTime;
-
-            currentWallClimbSpeed = Mathf.MoveTowards(
-                currentWallClimbSpeed,
-                wallClimbSpeed,
-                (wallClimbSpeed / wallClimbSpeedRampUp) * Time.deltaTime
-            );
-        }
-        else
-        {
-            // Phase 3 — Stamina depleted: slide accelerates over time toward freefall
-            isWallClimbing = false;
-            isWallHanging = true;
-
-            // Accelerate slide speed up toward gravity-equivalent freefall
-            // instead of clamping to a fixed wallSlideSpeed, we let it keep building
-            currentWallSlideSpeed = Mathf.MoveTowards(
-                currentWallSlideSpeed,
-                maxSpeed * 3f, // target is effectively freefall speed, not a gentle slide
-                wallSlideAcceleration * Time.deltaTime
-            );
-        }
-    }
-
-    private void HandleTimers()
-    {
-        if (controller.isGrounded)
-        {
-            coyoteTimer = coyoteTime;
-            jumpsRemaining = maxJumps;
-        }
-        else
-        {
-            coyoteTimer -= Time.deltaTime;
-        }
-
-        wallCoyoteTimer -= Time.deltaTime;
-        jumpBufferTimer -= Time.deltaTime;
-        wallAttachCooldownTimer -= Time.deltaTime;
-        wallJumpControlLockTimer -= Time.deltaTime;
-
-        if (input.jumpPressed)
-        {
-            jumpBufferTimer = jumpBufferTime;
-            input.ConsumeJumpPress();
-        }
-    }
-
-    private void HandleJump()
-    {
-        bool wantsJump = jumpBufferTimer > 0f;
-        if (!wantsJump) return;
-
-        bool wallJumpAvailable = isWallClimbing || isWallHanging || wallCoyoteTimer > 0f;
-
-        if (wallJumpAvailable && !controller.isGrounded)
-        {
-            horizontalVelocity = wallNormal * wallJumpHorizontalForce;
-            velocity.y = wallJumpVerticalForce;
-
-            wallJumpControlLockTimer = wallJumpControlLockDuration;
-
-            // Store which wall was jumped from instead of blanket cooldown
-            lastWallNormal = wallNormal;
-            wallAttachCooldownTimer = wallAttachCooldown;
-
-            isWallClimbing = false;
-            isWallHanging = false;
-            wallCoyoteTimer = 0f;
-            jumpsRemaining = maxJumps - 1;
-
-            jumpBufferTimer = 0f;
-            coyoteTimer = 0f;
-            return;
-        }
-
-        bool groundedJumpAvailable = coyoteTimer > 0f;
-        bool airJumpAvailable = jumpsRemaining > 0;
-
-        if (groundedJumpAvailable || airJumpAvailable)
-        {
-            velocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
-            jumpBufferTimer = 0f;
-
-            if (groundedJumpAvailable)
-            {
-                coyoteTimer = 0f;
-                jumpsRemaining = maxJumps - 1;
-            }
-            else
-            {
-                jumpsRemaining--;
-            }
-        }
-    }
-
-    private void HandleMove()
-    {
-        if (wallJumpControlLockTimer > 0f)
-            return;
-
-        if (isWallClimbing || isWallHanging)
-        {
-            horizontalVelocity = Vector3.zero;
-            return;
-        }
-
-        Vector2 moveInput = input.moveInput;
-        Vector3 inputDir = new Vector3(moveInput.x, 0f, moveInput.y);
-
-        float targetSpeed = maxSpeed * (input.sprintHeld ? sprintMultiplier : 1f);
-        Vector3 targetVelocity = inputDir * targetSpeed;
-
-        float rate = inputDir.magnitude > 0.01f ? acceleration : deceleration;
-
-        if (!controller.isGrounded)
-            rate *= airControlMultiplier;
-
-        horizontalVelocity = Vector3.MoveTowards(horizontalVelocity, targetVelocity, rate * Time.deltaTime);
-    }
-
-    private void ApplyGravity()
-    {
-        if (isWallClimbing)
-        {
-            velocity.y = currentWallClimbSpeed;
-            return;
-        }
-
-        if (isWallHanging)
-        {
-            if (!wallAutoClimbActive)
-            {
-                // Phase 1 hold: completely stationary, not falling at all
-                velocity.y = 0f;
-            }
-            else
-            {
-                // Phase 3 slide: use accumulated slide speed, moving downward
-                // applying it directly rather than through gravity so wall friction
-                // controls the descent rather than freefall — but it keeps building
-                velocity.y = -currentWallSlideSpeed;
-
-                // Once slide speed is high enough, just let gravity take over fully
-                // this is the "basically falling" threshold — wall can no longer hold them
-                if (currentWallSlideSpeed >= maxSpeed * 2f)
+                //ground jump
+                else if ((releasedEarly || reachedMaxCharge) && jumpTimerGoing)
                 {
-                    isWallHanging = false;
-                    isTouchingWall = false; // detach — gravity takes over from here
+                    jumpBufferTimer = 0f;
+                    jumpTimerGoing = false;
+                    inputHandler.ConsumeJumpPress();
+                    jumpRemaining = 1;
+                    playerVerticalVelocity = (0.10f + jumpPower) * jumpPowerModifier;
+                    jumpPower = 0f;
+                    currentState = MovementState.Airborne;
+                    break;
                 }
+                
+
+                HorizontalMovement();
+                VerticalMovement();
+                if (!controller.isGrounded) currentState = MovementState.Airborne;
+                break;
+
+            case MovementState.Airborne:
+                currentMaxSpeed = airSpeedMax;
+                currentSmoothTime = airSmoothTime;
+                currentClimbTime = climbTimer;
+                if (jumpRemaining > 0 && jumpTimerGoing)
+                {
+                    
+                    inputHandler.ConsumeJumpPress();
+                    jumpBufferTimer = 0f;
+                    jumpTimerGoing = false;
+
+                    jumpRemaining = 0;
+                    playerVerticalVelocity = 0.3f * jumpPowerModifier;
+                    jumpPower = 0f;
+                }
+                HorizontalMovement();
+                VerticalMovement();
+                if (wallNearby && runningTowardsWall && wallJumpLockoutTimer <= 0f) 
+                {
+                    playerVerticalVelocity = 0f;
+                    currentState = MovementState.Climbing;
+                }
+                if (canHang && (ledgeJumpLockoutTimer <= 0))
+                {
+                    currentState = MovementState.Hanging;
+                }
+                if(controller.isGrounded) currentState = MovementState.Grounded;
+ 
+                break;
+
+            case MovementState.Climbing:
+                jumpRemaining = 1;
+                Wallmovement();
+                if (!wallNearby)
+                {
+                    currentState = MovementState.Airborne;
+                }
+
+                if (canHang && (currentClimbTime > climbTimer / 4f))
+                {
+                    //direkt yukarý týrman
+                }
+                else if (canHang &&( ledgeJumpLockoutTimer<=0))
+                {
+                    currentState = MovementState.Hanging;
+                }
+                break;
+
+            case MovementState.Sliding:
+                Wallmovement();
+                if (!wallNearby)
+                {
+                    currentState = MovementState.Airborne;
+                }
+                else if (controller.isGrounded)
+                {
+                    currentState = MovementState.Grounded;
+                }
+                break;
+            case MovementState.Hanging:
+                jumpRemaining = 1;
+                if (canHang)
+                {
+                    movementHorizontal= Vector3.zero;
+                    playerVerticalVelocity = 0f;
+                }
+                if (jumpRemaining > 0 && jumpTimerGoing)
+                {
+                    currentState = MovementState.Airborne;
+                    ledgeJumpLockoutTimer = LEDGE_JUMP_LOCKOUT_DURATION;
+                    
+                    
+                }
+                
+                HorizontalMovement();
+                VerticalMovement();
+
+                break;
+        }
+    }
+
+
+
+
+    private void HorizontalMovement()
+    {
+        inputToRotate = inputHandler.moveInput;
+        float inputMagnitude = Mathf.Clamp01(inputToRotate.magnitude);
+        float angleDifference = 0f;
+
+        if (inputMagnitude > 0.1f && currentState == MovementState.Grounded)
+        {
+            float inputAngle = Mathf.Atan2(inputToRotate.x, inputToRotate.y) * Mathf.Rad2Deg;
+            float cameraAngle = playerCamera.transform.rotation.eulerAngles.y;
+            float targetAngle = inputAngle + cameraAngle;
+
+            Quaternion targetRotation = Quaternion.Euler(0f, targetAngle, 0f);
+            angleDifference = Quaternion.Angle(transform.rotation, targetRotation);
+
+            if (!isPivotingOnSpot && angleDifference > 110f)
+            {
+                isPivotingOnSpot = true;
             }
+
+            transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRotation, rotationSpeed * Time.fixedDeltaTime);
+        }
+
+        if (isPivotingOnSpot && angleDifference < 15f)
+        {
+            isPivotingOnSpot = false;
+        }
+
+        if (inputMagnitude <= 0.05f)
+        {
+            isPivotingOnSpot = false;
+        }
+
+        Vector3 targetVelocity;
+
+        if ((wallJumpLockoutTimer > 0f)||(ledgeJumpLockoutTimer>0))
+        {
+            targetVelocity = movementHorizontal;
+        }
+        else if (currentState == MovementState.Grounded && isPivotingOnSpot)
+        {
+            targetVelocity = Vector3.zero;
+        }
+        else if (currentState == MovementState.Grounded)
+        {
+            float alignmentModifier = Mathf.Clamp01(1f - (angleDifference / 180f));
+            targetVelocity = transform.forward * inputMagnitude * currentMaxSpeed * alignmentModifier;
+        }
+        else if (currentState == MovementState.Airborne)
+        {
+            Vector3 camForward = playerCamera.transform.forward;
+            Vector3 camRight = playerCamera.transform.right;
+
+            camForward.y = 0f;
+            camRight.y = 0f;
+            camForward.Normalize();
+            camRight.Normalize();
+
+            Vector3 cameraRelativeDirection = (camForward * inputToRotate.y) + (camRight * inputToRotate.x);
+            targetVelocity = cameraRelativeDirection.normalized * inputMagnitude * currentMaxSpeed;
+        }
+        else
+        {
+            targetVelocity = Vector3.zero;
+        }
+
+        movementHorizontal = Vector3.SmoothDamp(movementHorizontal, targetVelocity, ref smoothMoveVelocity, currentSmoothTime, Mathf.Infinity, Time.fixedDeltaTime);
+    }
+
+
+
+    private void VerticalMovement()
+    {
+        if (currentState == MovementState.Airborne)
+        {
+            jumpPower = 0f;
+            playerVerticalVelocity -= gravitationalAcceleration * Time.fixedDeltaTime;
+            playerVerticalVelocity = Mathf.Max(playerVerticalVelocity, gravityMax);
+
+            
+        }
+
+        Vector3 motion = new Vector3(0, playerVerticalVelocity, 0);
+        finalMovement = movementHorizontal + motion;
+        controller.Move(finalMovement * Time.fixedDeltaTime);
+        jumpPower = Mathf.Clamp01(jumpPower);
+
+        Vector3 worldControllerCenter = transform.TransformPoint(controller.center);
+        Vector3 castOrigin = worldControllerCenter + sphereCastOffsetCeiling;
+        RaycastHit hitCeiling;
+
+        if (Physics.SphereCast(castOrigin, controller.radius, transform.up, out hitCeiling, sphereCastHeightCeiling, climbable))
+        {
+            if (hitCeiling.normal.y < -0.5f) 
+            {
+                playerVerticalVelocity = groundedVerticalVelocity;
+            }
+        }
+
+
+    }
+    private void Wallmovement()
+    {
+        if ((currentState == MovementState.Climbing|| currentState == MovementState.Sliding) && jumpTimerGoing)
+        {
+
+            transform.rotation = transform.rotation* Quaternion.Euler(0, 180, 0);
+            jumpRemaining = 0;
+            inputHandler.ConsumeJumpPress();
+            movementHorizontal = pureHorizontalNormal * wallJumpMultiplier;
+            playerVerticalVelocity = wallJumpMultiplier * 2f;
+            wallJumpLockoutTimer = WALL_JUMP_LOCKOUT_DURATION;
+            currentState = MovementState.Airborne;
+            jumpBufferTimer = 0f;
+            jumpTimerGoing = false;
             return;
         }
 
-        float g = gravity;
+        if (currentState == MovementState.Climbing && currentClimbTime > 0f)
+        {
+            currentClimbTime -= Time.fixedDeltaTime;
+            float targetVerticalSpeed = climbSpeedMax;
+            playerVerticalVelocity = Mathf.MoveTowards(playerVerticalVelocity, targetVerticalSpeed, (1f / climbSmoothTime) * Time.fixedDeltaTime);
+            Vector3 climbMotion = new Vector3(0f, playerVerticalVelocity, 0f);
+            controller.Move(climbMotion * Time.fixedDeltaTime);
 
-        if (velocity.y < 0f)
-            g *= fallGravityMultiplier;
-        else if (velocity.y > 0f && !input.jumpHeld)
-            g *= lowJumpMultiplier;
+        }
+        else if (currentState == MovementState.Sliding)
+        {
+            float targetVerticalSpeed = -slideSpeedMax;
+            playerVerticalVelocity = Mathf.MoveTowards(playerVerticalVelocity, targetVerticalSpeed, (1f / slideSmoothTime) * Time.fixedDeltaTime);
+            Vector3 slideMotion = new Vector3(0f, playerVerticalVelocity, 0f);
+            controller.Move(slideMotion * Time.fixedDeltaTime);
+        }
+        else if (currentState == MovementState.Climbing && currentClimbTime <= 0f)
+        {
+            currentClimbTime = 0f;
+            currentState = MovementState.Sliding;
+        }
 
-        velocity.y += g * Time.deltaTime;
-
-        if (controller.isGrounded && velocity.y < 0f)
-            velocity.y = -2f;
     }
+    
+
+    private void WallDetection()
+    {
+        Vector3 ledgePosition = Vector3.zero;
+
+        RaycastHit hitWall;
+        Vector3 worldControllerCenter = transform.TransformPoint(controller.center);
+        Vector3 castOrigin = worldControllerCenter +(transform.forward.normalized*sphereCastOffsetWall);
+
+        wallNearby = Physics.SphereCast(castOrigin, sphereRadius, transform.forward, out hitWall, sphereCastForwardWall, climbable);
+        if(wallNearby)
+        {
+            pureHorizontalNormal = new Vector3(hitWall.normal.x, 0f, hitWall.normal.z).normalized;
+        }
+        if (inputHandler.moveInput.magnitude > 0.01f&& wallNearby)
+        {
+            float dotproduct = Vector3.Dot(hitWall.normal,transform.forward);
+            runningTowardsWall = dotproduct < -0.9f;
+        }
+        /*
+        Vector3 worldControllerCenter2 = transform.TransformPoint(controller.center);
+        Vector3 worldOffset = transform.TransformDirection(sphereCastOffsetLedge);
+        Vector3 castOrigin2 = (worldControllerCenter2 + worldOffset);
+        RaycastHit hitWallY;
+
+        ledgeNearby = Physics.SphereCast(castOrigin2, ledgeRadius, -transform.up, out hitWallY, sphereCastLedgeHeight, climbable);
+        if (ledgeNearby)
+        {
+            float heightDiff = hitWallY.point.y - transform.position.y;
+            canHang = heightDiff > 0f && heightDiff < ledgeOffset;
+        }
+        else
+        {
+            canHang = false;
+        }
+        */
+        
+
+    }
+
+
+
 }
