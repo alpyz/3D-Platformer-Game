@@ -60,14 +60,15 @@ public class PlayerMovement : MonoBehaviour
 
     [Header("Wall Jump")]
     public bool wallNearby;
-    public float sphereCastOffsetWall;
-    public float sphereCastForwardWall;
+    public float castSeperation = 4f;
+    public Vector3 sphereCastOffsetWall;
+    public float sphereCastHeight;
     public float sphereRadius;
     private Vector3 pureHorizontalNormal;
     public float wallJumpMultiplier;
     private float wallJumpLockoutTimer;
     private const float WALL_JUMP_LOCKOUT_DURATION = 0.25f;
-
+    private int sphereCastHitCount;
 
     [Header("Climb")]
     public float climbSpeedMax;
@@ -82,22 +83,19 @@ public class PlayerMovement : MonoBehaviour
 
     [Header("Ledge")]
     public bool canHang;
-    public bool ledgeNearby;
-    public float ledgeOffset = 0.1f;
-    public float sphereCastLedgeHeight;
-    public float ledgeRadius;
-    public Vector3 sphereCastOffsetLedge;
+    public bool castHitMiddle;
+    public bool castHitUpper;
+    public float castHeight = 0.4f;
+    
+    public Vector3 rayCastOffsetUpper;
+    public Vector3 rayCastOffsetMiddle;
     private float ledgeJumpLockoutTimer;
     private const float LEDGE_JUMP_LOCKOUT_DURATION = 0.25f;
 
 
-    public float ledgeCheckLowerHeight = 0.8f;   // roughly waist height relative to controller center
-    public float ledgeCheckUpperHeight = 2.2f;   // roughly above head height
-    public float ledgeCheckForwardDistance = 0.6f;
-    public float ledgeSurfaceMaxNormalAngle = 45f;
+
     private void Start()
     {
-        ledgeCheckUpperHeight = controller.height * 0.95f;
         currentClimbTime = climbTimer;
         inputHandler = GetComponent<PlayerInputHandler>();
         controller = GetComponent<CharacterController>();
@@ -250,6 +248,10 @@ public class PlayerMovement : MonoBehaviour
                 {
                     currentState = MovementState.Airborne;
                 }
+                else if (canHang)
+                {
+                    currentState = MovementState.Hanging;
+                }
                 else if (controller.isGrounded)
                 {
                     currentState = MovementState.Grounded;
@@ -262,17 +264,18 @@ public class PlayerMovement : MonoBehaviour
                     movementHorizontal= Vector3.zero;
                     playerVerticalVelocity = 0f;
                 }
+                else
+                {
+                    currentState = MovementState.Airborne;
+                }
                 if (jumpRemaining > 0 && jumpTimerGoing)
                 {
                     currentState = MovementState.Airborne;
                     ledgeJumpLockoutTimer = LEDGE_JUMP_LOCKOUT_DURATION;
-                    
-                    
+
+
                 }
                 
-                HorizontalMovement();
-                VerticalMovement();
-
                 break;
         }
     }
@@ -330,16 +333,7 @@ public class PlayerMovement : MonoBehaviour
         }
         else if (currentState == MovementState.Airborne)
         {
-            Vector3 camForward = playerCamera.transform.forward;
-            Vector3 camRight = playerCamera.transform.right;
-
-            camForward.y = 0f;
-            camRight.y = 0f;
-            camForward.Normalize();
-            camRight.Normalize();
-
-            Vector3 cameraRelativeDirection = (camForward * inputToRotate.y) + (camRight * inputToRotate.x);
-            targetVelocity = cameraRelativeDirection.normalized * inputMagnitude * currentMaxSpeed;
+            targetVelocity = transform.forward * inputMagnitude * currentMaxSpeed;
         }
         else
         {
@@ -426,40 +420,51 @@ public class PlayerMovement : MonoBehaviour
     private void WallDetection()
     {
         Vector3 ledgePosition = Vector3.zero;
-
+        Vector3 seperation = Vector3.up * castSeperation;
         RaycastHit hitWall;
-        Vector3 worldControllerCenter = transform.TransformPoint(controller.center);
-        Vector3 castOrigin = worldControllerCenter +(transform.forward.normalized*sphereCastOffsetWall);
-
-        wallNearby = Physics.SphereCast(castOrigin, sphereRadius, transform.forward, out hitWall, sphereCastForwardWall, climbable);
-        if(wallNearby)
-        {
-            pureHorizontalNormal = new Vector3(hitWall.normal.x, 0f, hitWall.normal.z).normalized;
-        }
-        if (inputHandler.moveInput.magnitude > 0.01f&& wallNearby)
-        {
-            float dotproduct = Vector3.Dot(hitWall.normal,transform.forward);
-            runningTowardsWall = dotproduct < -0.9f;
-        }
-        /*
-        Vector3 worldControllerCenter2 = transform.TransformPoint(controller.center);
-        Vector3 worldOffset = transform.TransformDirection(sphereCastOffsetLedge);
-        Vector3 castOrigin2 = (worldControllerCenter2 + worldOffset);
-        RaycastHit hitWallY;
-
-        ledgeNearby = Physics.SphereCast(castOrigin2, ledgeRadius, -transform.up, out hitWallY, sphereCastLedgeHeight, climbable);
-        if (ledgeNearby)
-        {
-            float heightDiff = hitWallY.point.y - transform.position.y;
-            canHang = heightDiff > 0f && heightDiff < ledgeOffset;
-        }
-        else
-        {
-            canHang = false;
-        }
-        */
         
 
+        sphereCastHitCount = 0;
+        for (int i = 0; i < 3; i++)
+        {
+            Vector3 worldControllerCenter = transform.TransformPoint(controller.center);
+            Vector3 worldOffset = transform.TransformDirection(sphereCastOffsetWall);
+            Vector3 castOrigin = (worldControllerCenter + worldOffset + seperation * i);
+
+            if (Physics.SphereCast(castOrigin, sphereRadius, transform.forward, out hitWall, sphereCastHeight, climbable))
+            {
+                sphereCastHitCount++;
+                
+            }
+            wallNearby = sphereCastHitCount > 0;
+
+            if (wallNearby)
+            {
+                pureHorizontalNormal = new Vector3(hitWall.normal.x, 0f, hitWall.normal.z).normalized;
+            }
+            if (inputHandler.moveInput.magnitude > 0.01f && wallNearby)
+            {
+                float dotproduct = Vector3.Dot(hitWall.normal, transform.forward);
+                runningTowardsWall = dotproduct < -0.9f;
+            }
+        }
+
+        Vector3 worldControllerCenter2 = transform.TransformPoint(controller.center);
+        Vector3 worldOffset2 = transform.TransformDirection(rayCastOffsetMiddle);
+        Vector3 castOrigin2 = (worldControllerCenter2 + worldOffset2);
+        RaycastHit hitLedgeMid;
+
+        castHitMiddle = Physics.Raycast(castOrigin2, transform.forward, out hitLedgeMid, castHeight, climbable);
+
+        Vector3 worldControllerCenter3 = transform.TransformPoint(controller.center);
+        Vector3 worldOffset3 = transform.TransformDirection(rayCastOffsetUpper);
+        Vector3 castOrigin3 = (worldControllerCenter3 + worldOffset3);
+        RaycastHit hitLedgeUpper;
+
+        castHitUpper = Physics.Raycast(castOrigin3, transform.forward, out hitLedgeUpper, castHeight, climbable);
+
+        canHang = !castHitUpper && castHitMiddle;   
+        
     }
 
 

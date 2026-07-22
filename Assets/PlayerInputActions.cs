@@ -319,6 +319,94 @@ public partial class @PlayerInputActions: IInputActionCollection2, IDisposable
                     ""isPartOfComposite"": false
                 }
             ]
+        },
+        {
+            ""name"": ""ModeChange"",
+            ""id"": ""bdbe7b22-85b9-4258-8386-7da8ebcc781f"",
+            ""actions"": [
+                {
+                    ""name"": ""Boulder"",
+                    ""type"": ""Button"",
+                    ""id"": ""60fd9d33-0bfa-4eff-a8d3-3d3ca017a576"",
+                    ""expectedControlType"": """",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""Human"",
+                    ""type"": ""Button"",
+                    ""id"": ""d23eef28-64a5-43b1-a63f-e1a0a2ab590e"",
+                    ""expectedControlType"": """",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""New action2"",
+                    ""type"": ""Button"",
+                    ""id"": ""d52f0313-8279-48c4-a88d-3a0b73a3d0a1"",
+                    ""expectedControlType"": """",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""New action3"",
+                    ""type"": ""Button"",
+                    ""id"": ""3f588e76-12a9-4f29-b88a-f808274bf726"",
+                    ""expectedControlType"": """",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
+                }
+            ],
+            ""bindings"": [
+                {
+                    ""name"": """",
+                    ""id"": ""86974203-04e1-41ca-9886-b34f6ad2fe44"",
+                    ""path"": ""<Keyboard>/1"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""Boulder"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""a3e95227-eaf0-4e8b-b30a-581a481aa16b"",
+                    ""path"": ""<Keyboard>/2"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""Human"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""527698b6-a0c6-4cf7-a04e-0cf3e1be9eb4"",
+                    ""path"": """",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""New action2"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""89f376be-f7ac-45b0-adf6-39a39fa9fe89"",
+                    ""path"": """",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""New action3"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                }
+            ]
         }
     ],
     ""controlSchemes"": []
@@ -335,6 +423,12 @@ public partial class @PlayerInputActions: IInputActionCollection2, IDisposable
         m_Camera = asset.FindActionMap("Camera", throwIfNotFound: true);
         m_Camera_CameraMove = m_Camera.FindAction("CameraMove", throwIfNotFound: true);
         m_Camera_CameraZoom = m_Camera.FindAction("CameraZoom", throwIfNotFound: true);
+        // ModeChange
+        m_ModeChange = asset.FindActionMap("ModeChange", throwIfNotFound: true);
+        m_ModeChange_Boulder = m_ModeChange.FindAction("Boulder", throwIfNotFound: true);
+        m_ModeChange_Human = m_ModeChange.FindAction("Human", throwIfNotFound: true);
+        m_ModeChange_Newaction2 = m_ModeChange.FindAction("New action2", throwIfNotFound: true);
+        m_ModeChange_Newaction3 = m_ModeChange.FindAction("New action3", throwIfNotFound: true);
     }
 
     ~@PlayerInputActions()
@@ -342,6 +436,7 @@ public partial class @PlayerInputActions: IInputActionCollection2, IDisposable
         UnityEngine.Debug.Assert(!m_Movement.enabled, "This will cause a leak and performance issues, PlayerInputActions.Movement.Disable() has not been called.");
         UnityEngine.Debug.Assert(!m_UI.enabled, "This will cause a leak and performance issues, PlayerInputActions.UI.Disable() has not been called.");
         UnityEngine.Debug.Assert(!m_Camera.enabled, "This will cause a leak and performance issues, PlayerInputActions.Camera.Disable() has not been called.");
+        UnityEngine.Debug.Assert(!m_ModeChange.enabled, "This will cause a leak and performance issues, PlayerInputActions.ModeChange.Disable() has not been called.");
     }
 
     /// <summary>
@@ -734,6 +829,135 @@ public partial class @PlayerInputActions: IInputActionCollection2, IDisposable
     /// Provides a new <see cref="CameraActions" /> instance referencing this action map.
     /// </summary>
     public CameraActions @Camera => new CameraActions(this);
+
+    // ModeChange
+    private readonly InputActionMap m_ModeChange;
+    private List<IModeChangeActions> m_ModeChangeActionsCallbackInterfaces = new List<IModeChangeActions>();
+    private readonly InputAction m_ModeChange_Boulder;
+    private readonly InputAction m_ModeChange_Human;
+    private readonly InputAction m_ModeChange_Newaction2;
+    private readonly InputAction m_ModeChange_Newaction3;
+    /// <summary>
+    /// Provides access to input actions defined in input action map "ModeChange".
+    /// </summary>
+    public struct ModeChangeActions
+    {
+        private @PlayerInputActions m_Wrapper;
+
+        /// <summary>
+        /// Construct a new instance of the input action map wrapper class.
+        /// </summary>
+        public ModeChangeActions(@PlayerInputActions wrapper) { m_Wrapper = wrapper; }
+        /// <summary>
+        /// Provides access to the underlying input action "ModeChange/Boulder".
+        /// </summary>
+        public InputAction @Boulder => m_Wrapper.m_ModeChange_Boulder;
+        /// <summary>
+        /// Provides access to the underlying input action "ModeChange/Human".
+        /// </summary>
+        public InputAction @Human => m_Wrapper.m_ModeChange_Human;
+        /// <summary>
+        /// Provides access to the underlying input action "ModeChange/Newaction2".
+        /// </summary>
+        public InputAction @Newaction2 => m_Wrapper.m_ModeChange_Newaction2;
+        /// <summary>
+        /// Provides access to the underlying input action "ModeChange/Newaction3".
+        /// </summary>
+        public InputAction @Newaction3 => m_Wrapper.m_ModeChange_Newaction3;
+        /// <summary>
+        /// Provides access to the underlying input action map instance.
+        /// </summary>
+        public InputActionMap Get() { return m_Wrapper.m_ModeChange; }
+        /// <inheritdoc cref="UnityEngine.InputSystem.InputActionMap.Enable()" />
+        public void Enable() { Get().Enable(); }
+        /// <inheritdoc cref="UnityEngine.InputSystem.InputActionMap.Disable()" />
+        public void Disable() { Get().Disable(); }
+        /// <inheritdoc cref="UnityEngine.InputSystem.InputActionMap.enabled" />
+        public bool enabled => Get().enabled;
+        /// <summary>
+        /// Implicitly converts an <see ref="ModeChangeActions" /> to an <see ref="InputActionMap" /> instance.
+        /// </summary>
+        public static implicit operator InputActionMap(ModeChangeActions set) { return set.Get(); }
+        /// <summary>
+        /// Adds <see cref="InputAction.started"/>, <see cref="InputAction.performed"/> and <see cref="InputAction.canceled"/> callbacks provided via <param cref="instance" /> on all input actions contained in this map.
+        /// </summary>
+        /// <param name="instance">Callback instance.</param>
+        /// <remarks>
+        /// If <paramref name="instance" /> is <c>null</c> or <paramref name="instance"/> have already been added this method does nothing.
+        /// </remarks>
+        /// <seealso cref="ModeChangeActions" />
+        public void AddCallbacks(IModeChangeActions instance)
+        {
+            if (instance == null || m_Wrapper.m_ModeChangeActionsCallbackInterfaces.Contains(instance)) return;
+            m_Wrapper.m_ModeChangeActionsCallbackInterfaces.Add(instance);
+            @Boulder.started += instance.OnBoulder;
+            @Boulder.performed += instance.OnBoulder;
+            @Boulder.canceled += instance.OnBoulder;
+            @Human.started += instance.OnHuman;
+            @Human.performed += instance.OnHuman;
+            @Human.canceled += instance.OnHuman;
+            @Newaction2.started += instance.OnNewaction2;
+            @Newaction2.performed += instance.OnNewaction2;
+            @Newaction2.canceled += instance.OnNewaction2;
+            @Newaction3.started += instance.OnNewaction3;
+            @Newaction3.performed += instance.OnNewaction3;
+            @Newaction3.canceled += instance.OnNewaction3;
+        }
+
+        /// <summary>
+        /// Removes <see cref="InputAction.started"/>, <see cref="InputAction.performed"/> and <see cref="InputAction.canceled"/> callbacks provided via <param cref="instance" /> on all input actions contained in this map.
+        /// </summary>
+        /// <remarks>
+        /// Calling this method when <paramref name="instance" /> have not previously been registered has no side-effects.
+        /// </remarks>
+        /// <seealso cref="ModeChangeActions" />
+        private void UnregisterCallbacks(IModeChangeActions instance)
+        {
+            @Boulder.started -= instance.OnBoulder;
+            @Boulder.performed -= instance.OnBoulder;
+            @Boulder.canceled -= instance.OnBoulder;
+            @Human.started -= instance.OnHuman;
+            @Human.performed -= instance.OnHuman;
+            @Human.canceled -= instance.OnHuman;
+            @Newaction2.started -= instance.OnNewaction2;
+            @Newaction2.performed -= instance.OnNewaction2;
+            @Newaction2.canceled -= instance.OnNewaction2;
+            @Newaction3.started -= instance.OnNewaction3;
+            @Newaction3.performed -= instance.OnNewaction3;
+            @Newaction3.canceled -= instance.OnNewaction3;
+        }
+
+        /// <summary>
+        /// Unregisters <param cref="instance" /> and unregisters all input action callbacks via <see cref="ModeChangeActions.UnregisterCallbacks(IModeChangeActions)" />.
+        /// </summary>
+        /// <seealso cref="ModeChangeActions.UnregisterCallbacks(IModeChangeActions)" />
+        public void RemoveCallbacks(IModeChangeActions instance)
+        {
+            if (m_Wrapper.m_ModeChangeActionsCallbackInterfaces.Remove(instance))
+                UnregisterCallbacks(instance);
+        }
+
+        /// <summary>
+        /// Replaces all existing callback instances and previously registered input action callbacks associated with them with callbacks provided via <param cref="instance" />.
+        /// </summary>
+        /// <remarks>
+        /// If <paramref name="instance" /> is <c>null</c>, calling this method will only unregister all existing callbacks but not register any new callbacks.
+        /// </remarks>
+        /// <seealso cref="ModeChangeActions.AddCallbacks(IModeChangeActions)" />
+        /// <seealso cref="ModeChangeActions.RemoveCallbacks(IModeChangeActions)" />
+        /// <seealso cref="ModeChangeActions.UnregisterCallbacks(IModeChangeActions)" />
+        public void SetCallbacks(IModeChangeActions instance)
+        {
+            foreach (var item in m_Wrapper.m_ModeChangeActionsCallbackInterfaces)
+                UnregisterCallbacks(item);
+            m_Wrapper.m_ModeChangeActionsCallbackInterfaces.Clear();
+            AddCallbacks(instance);
+        }
+    }
+    /// <summary>
+    /// Provides a new <see cref="ModeChangeActions" /> instance referencing this action map.
+    /// </summary>
+    public ModeChangeActions @ModeChange => new ModeChangeActions(this);
     /// <summary>
     /// Interface to implement callback methods for all input action callbacks associated with input actions defined by "Movement" which allows adding and removing callbacks.
     /// </summary>
@@ -799,5 +1023,41 @@ public partial class @PlayerInputActions: IInputActionCollection2, IDisposable
         /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
         /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
         void OnCameraZoom(InputAction.CallbackContext context);
+    }
+    /// <summary>
+    /// Interface to implement callback methods for all input action callbacks associated with input actions defined by "ModeChange" which allows adding and removing callbacks.
+    /// </summary>
+    /// <seealso cref="ModeChangeActions.AddCallbacks(IModeChangeActions)" />
+    /// <seealso cref="ModeChangeActions.RemoveCallbacks(IModeChangeActions)" />
+    public interface IModeChangeActions
+    {
+        /// <summary>
+        /// Method invoked when associated input action "Boulder" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// </summary>
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+        void OnBoulder(InputAction.CallbackContext context);
+        /// <summary>
+        /// Method invoked when associated input action "Human" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// </summary>
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+        void OnHuman(InputAction.CallbackContext context);
+        /// <summary>
+        /// Method invoked when associated input action "New action2" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// </summary>
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+        void OnNewaction2(InputAction.CallbackContext context);
+        /// <summary>
+        /// Method invoked when associated input action "New action3" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// </summary>
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+        void OnNewaction3(InputAction.CallbackContext context);
     }
 }

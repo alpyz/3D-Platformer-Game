@@ -2,6 +2,12 @@ using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
+
+public enum PlayerModeState
+{
+    human,
+    boulder,
+}
 public class PlayerInputHandler : MonoBehaviour
 {
     private PlayerInputActions controls;
@@ -11,6 +17,8 @@ public class PlayerInputHandler : MonoBehaviour
     public bool jumpHeld { get; private set; }
     public bool sprintHeld { get; private set; }
     public bool cameraMoving { get; private set; }
+
+    public PlayerModeState state  = PlayerModeState.boulder;
 
     private void Awake()
     {
@@ -25,23 +33,21 @@ public class PlayerInputHandler : MonoBehaviour
 
         controls.Movement.Enable();
         controls.Camera.Enable();
+        controls.ModeChange.Enable();
+
+
         controls.Movement.Jump.started += OnJumpStarted;
         controls.Movement.Jump.canceled += OnJumpCanceled;
         controls.Movement.Sprint.started += OnSprintStarted;
         controls.Movement.Sprint.canceled += OnSprintCanceled;
-        controls.Camera.CameraMove.started += OnCameraMoveStarted;
-        controls.Camera.CameraMove.canceled += OnCameraMoveCancelled;
+
+
+
+        controls.ModeChange.Boulder.performed += OnBoulderPerformed;
+        controls.ModeChange.Human.performed += OnHumanPerformed;
     }
 
-    private void OnCameraMoveCancelled(InputAction.CallbackContext context)
-    {
-        throw new NotImplementedException();
-    }
-
-    private void OnCameraMoveStarted(InputAction.CallbackContext context)
-    {
-        throw new NotImplementedException();
-    }
+    
 
     private void OnDisable()
     {
@@ -49,16 +55,38 @@ public class PlayerInputHandler : MonoBehaviour
         controls.Movement.Jump.canceled -= OnJumpCanceled;
         controls.Movement.Sprint.started -= OnSprintStarted;
         controls.Movement.Sprint.canceled -= OnSprintCanceled;
-        controls.Camera.CameraMove.started -= OnCameraMoveStarted;
-        controls.Camera.CameraMove.canceled -= OnCameraMoveCancelled;
+
+
+
+
+        controls.ModeChange.Boulder.performed -= OnBoulderPerformed;
+        controls.ModeChange.Human.performed -= OnHumanPerformed;
+
+
+
         controls.Movement.Disable();
         controls.Camera.Disable();
+        controls.ModeChange.Disable();
     }
+
+    
 
     private void Update()
     {
         moveInput = controls.Movement.Move.ReadValue<Vector2>();
     }
+    private void OnHumanPerformed(InputAction.CallbackContext context)
+    {
+        state = PlayerModeState.human;
+    }
+
+    private void OnBoulderPerformed(InputAction.CallbackContext context)
+    {
+        state = PlayerModeState.boulder;
+    }
+
+
+   
 
     private void OnSprintStarted(InputAction.CallbackContext context) => sprintHeld = true;
     private void OnSprintCanceled(InputAction.CallbackContext context) => sprintHeld = false;

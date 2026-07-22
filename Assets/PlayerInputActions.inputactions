@@ -233,6 +233,94 @@
                     "isPartOfComposite": false
                 }
             ]
+        },
+        {
+            "name": "ModeChange",
+            "id": "bdbe7b22-85b9-4258-8386-7da8ebcc781f",
+            "actions": [
+                {
+                    "name": "Boulder",
+                    "type": "Button",
+                    "id": "60fd9d33-0bfa-4eff-a8d3-3d3ca017a576",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "Human",
+                    "type": "Button",
+                    "id": "d23eef28-64a5-43b1-a63f-e1a0a2ab590e",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "New action2",
+                    "type": "Button",
+                    "id": "d52f0313-8279-48c4-a88d-3a0b73a3d0a1",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "New action3",
+                    "type": "Button",
+                    "id": "3f588e76-12a9-4f29-b88a-f808274bf726",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                }
+            ],
+            "bindings": [
+                {
+                    "name": "",
+                    "id": "86974203-04e1-41ca-9886-b34f6ad2fe44",
+                    "path": "<Keyboard>/1",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Boulder",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "a3e95227-eaf0-4e8b-b30a-581a481aa16b",
+                    "path": "<Keyboard>/2",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Human",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "527698b6-a0c6-4cf7-a04e-0cf3e1be9eb4",
+                    "path": "",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "New action2",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "89f376be-f7ac-45b0-adf6-39a39fa9fe89",
+                    "path": "",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "New action3",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                }
+            ]
         }
     ],
     "controlSchemes": []
