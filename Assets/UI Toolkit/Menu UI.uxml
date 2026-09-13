@@ -1,0 +1,9 @@
+<ui:UXML xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" noNamespaceSchemaLocation="../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
+    <Style src="project://database/Assets/UI%20Toolkit/MainMenuStyle.uss?fileID=7433441132597879392&amp;guid=8d6cecdd2afca9244ba9cf050fb3f69c&amp;type=3#MainMenuStyle"/>
+    <ui:VisualElement name="Container" style="flex-grow: 1; position: relative; height: 1080px; width: 1920px; top: auto; left: auto; background-color: rgb(81, 81, 81); background-image: url(&quot;project://database/Assets/UI%20Sprites/Main%20Menu/Hades.png?fileID=21300000&amp;guid=97295ccb0a7ed5e42ac12ca9bf16948b&amp;type=3#Hades&quot;);">
+        <ui:Label text="Oyun " name="Header" class="header" style="white-space: pre; -unity-text-align: upper-center; font-size: 212px;"/>
+        <ui:Button text="Start" name="StartButton" class="button" style="width: 220px; height: 50px; position: relative; top: auto; left: auto; border-top-left-radius: 17px; border-top-right-radius: 17px; border-bottom-right-radius: 17px; border-bottom-left-radius: 17px; background-image: url(&quot;project://database/Assets/UI%20Sprites/Main%20Menu/button.png?fileID=21300000&amp;guid=68c7ed4d95549f345b3dfafff1f0576a&amp;type=3#button&quot;); background-color: rgba(188, 188, 188, 0); border-left-color: rgba(149, 149, 149, 0); border-right-color: rgba(149, 149, 149, 0); border-top-color: rgba(149, 149, 149, 0); border-bottom-color: rgba(149, 149, 149, 0); background-size: 100% 100%; -unity-background-scale-mode: stretch-to-fill;"/>
+        <ui:Button text="Settings" name="SettingsButton" class="button"/>
+        <ui:Button text="Exit" name="ExitButton" class="button"/>
+    </ui:VisualElement>
+</ui:UXML>

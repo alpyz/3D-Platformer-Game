@@ -3,6 +3,7 @@ using Unity.Cinemachine;
 using UnityEngine;
 
 using UnityEngine.UIElements;
+using static UnityEditor.Experimental.GraphView.GraphView;
 
 
 public enum BoulderState
@@ -13,7 +14,7 @@ public enum BoulderState
 public enum BoulderSpeedState
 {
     BoulderSlow,
-    BoulderModerate,
+    BoulderMedium,
     BoulderFast,
 }
 
@@ -27,7 +28,7 @@ public class PlayerBoulder : MonoBehaviour
     public BoulderSpeedState currentBoulderSpeedState = BoulderSpeedState.BoulderSlow;
     private Vector2 inputToRotate;
     public float rotationSpeed2 = 720f;
-    public CinemachineCamera playerCamera;
+    
     SphereCollider colliderBall;
 
     [Header("Ground Check")]
@@ -41,6 +42,7 @@ public class PlayerBoulder : MonoBehaviour
 
 
     [Header("Movement")]
+    public float speedLimit = 40f;
     public float boulderRotationSpeed;
     public float boulderForce;
     public float boulderSpeedMax;
@@ -53,13 +55,27 @@ public class PlayerBoulder : MonoBehaviour
     public float boulderGravityIncrease = -5f;
     private float boulderDownWardMax = -10f;
     private float boulderDownwardForce = -50f;
-    
 
+    [Header("Camera")]
+    public CinemachineCamera playerCamera;
+    private CinemachineBasicMultiChannelPerlin cameraShake;
+    public float shakeMultiplier;
+
+    [Header("Break Stuff")]
+    [SerializeField] LayerMask barrierLayer;
+
+
+
+
+
+    [Header("Particle Effects")]
+    [SerializeField] ParticleSystem fastBoulderEffect;
     private void Start()
     {
         rb = GetComponent<Rigidbody>();
         colliderBall = GetComponent<SphereCollider>();
         inputHandler = GetComponentInParent<PlayerInputHandler>();
+        cameraShake = playerCamera.GetComponent<CinemachineBasicMultiChannelPerlin>();
 
         
     }
@@ -84,6 +100,39 @@ public class PlayerBoulder : MonoBehaviour
                 if (boulderGrounded)
                 {
                     currentBoulderState = BoulderState.BoulderGrounded;
+                    //particle effect
+                }
+                break;
+        }
+        
+        switch (currentBoulderSpeedState)
+        {
+            
+            case BoulderSpeedState.BoulderSlow:
+                if (rb.linearVelocity.magnitude >= speedLimit *.5f)
+                {
+                    
+                    currentBoulderSpeedState = BoulderSpeedState.BoulderMedium;
+                    
+                }
+                break;
+            case BoulderSpeedState.BoulderMedium:
+                if (rb.linearVelocity.magnitude >= speedLimit)
+                {
+                    fastBoulderEffect.Play();
+                    currentBoulderSpeedState = BoulderSpeedState.BoulderFast;
+                    //particle effect
+                }
+                else if (rb.linearVelocity.magnitude < speedLimit*.5f)
+                {
+                    currentBoulderSpeedState = BoulderSpeedState.BoulderSlow;
+                }
+                break;
+            case BoulderSpeedState.BoulderFast:
+                if (rb.linearVelocity.magnitude < speedLimit)
+                {
+                    fastBoulderEffect.Stop();
+                    currentBoulderSpeedState = BoulderSpeedState.BoulderSlow;
                 }
                 break;
         }
@@ -101,7 +150,11 @@ public class PlayerBoulder : MonoBehaviour
 
     private void BoulderHorizontal()
     {
-        
+        float particleDirectionY = Mathf.Atan2(rb.linearVelocity.normalized.z, rb.linearVelocity.normalized.x)*Mathf.Rad2Deg;
+
+        fastBoulderEffect.transform.rotation = Quaternion.Euler(fastBoulderEffect.transform.rotation.x, -particleDirectionY, fastBoulderEffect.transform.rotation.z);
+
+
 
 
         inputToRotate = inputHandler.moveInput;
@@ -174,9 +227,22 @@ public class PlayerBoulder : MonoBehaviour
 
 
 
-        }       
-        
-        
+        }
+
+        if (currentBoulderState == BoulderState.BoulderGrounded && (currentBoulderSpeedState == BoulderSpeedState.BoulderFast||currentBoulderSpeedState ==BoulderSpeedState.BoulderMedium))
+        {
+            cameraShake.AmplitudeGain = rb.linearVelocity.magnitude * shakeMultiplier;
+            Debug.Log(rb.linearVelocity.magnitude);
+        }
+        else
+        {
+            cameraShake.AmplitudeGain = 0f;
+        }
+
+
+
+
+
     }
 
     private void BoulderVertical()
@@ -190,5 +256,25 @@ public class PlayerBoulder : MonoBehaviour
             rb.AddForce(Vector3.up * boulderDownwardForce * Time.fixedDeltaTime);
         }
     }
+
+
+
+
+
+
+    private void OnTriggerEnter(Collider barrier)
+    {
+        if ((barrierLayer.value & (1 << barrier.gameObject.layer)) != 0 && currentBoulderSpeedState == BoulderSpeedState.BoulderFast )
+        {
+            barrier.enabled = false;
+            
+            
+
+           
+        }
+    }
+    
+
+
 
 }

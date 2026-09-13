@@ -32,6 +32,15 @@
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": false
+                },
+                {
+                    "name": "JumpStart",
+                    "type": "Button",
+                    "id": "8249dda1-6334-428d-92fc-24a8efbb656b",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
                 }
             ],
             "bindings": [
@@ -133,6 +142,28 @@
                     "action": "Sprint",
                     "isComposite": false,
                     "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "2770f58c-4b01-46a4-a5d3-387662e02f36",
+                    "path": "<Keyboard>/space",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "JumpStart",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "20d4f624-10db-4c13-8d66-bea30b15afdf",
+                    "path": "<Gamepad>/buttonSouth",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "JumpStart",
+                    "isComposite": false,
+                    "isPartOfComposite": false
                 }
             ]
         },
@@ -154,7 +185,7 @@
                 {
                     "name": "",
                     "id": "ba49e584-74a3-471a-b1ad-566ca06faa32",
-                    "path": "",
+                    "path": "<Mouse>/leftButton",
                     "interactions": "",
                     "processors": "",
                     "groups": "",
@@ -226,7 +257,7 @@
                     "id": "8a232416-8675-467e-a850-99f781ed252c",
                     "path": "<Gamepad>/rightStick/y",
                     "interactions": "",
-                    "processors": "StickDeadzone,Scale(factor=0.1)",
+                    "processors": "StickDeadzone(min=0.5),Scale(factor=0.1)",
                     "groups": "",
                     "action": "CameraZoom",
                     "isComposite": false,

@@ -18,6 +18,7 @@ public class PlayerInputHandler : MonoBehaviour
     public bool sprintHeld { get; private set; }
     public bool cameraMoving { get; private set; }
 
+    public bool secondPlayerJump { get; private set; }
     public PlayerModeState state  = PlayerModeState.boulder;
 
     private void Awake()
@@ -41,12 +42,12 @@ public class PlayerInputHandler : MonoBehaviour
         controls.Movement.Sprint.started += OnSprintStarted;
         controls.Movement.Sprint.canceled += OnSprintCanceled;
 
-
+        controls.Movement.JumpStart.started += OnJumpStartStarted;
+        controls.Movement.JumpStart.canceled += OnJumpStartCanceled;
 
         controls.ModeChange.Boulder.performed += OnBoulderPerformed;
         controls.ModeChange.Human.performed += OnHumanPerformed;
     }
-
     
 
     private void OnDisable()
@@ -56,7 +57,8 @@ public class PlayerInputHandler : MonoBehaviour
         controls.Movement.Sprint.started -= OnSprintStarted;
         controls.Movement.Sprint.canceled -= OnSprintCanceled;
 
-
+        controls.Movement.JumpStart.started -= OnJumpStartStarted;
+        controls.Movement.JumpStart.canceled -= OnJumpStartCanceled;
 
 
         controls.ModeChange.Boulder.performed -= OnBoulderPerformed;
@@ -85,8 +87,15 @@ public class PlayerInputHandler : MonoBehaviour
         state = PlayerModeState.boulder;
     }
 
+    private void OnJumpStartStarted(InputAction.CallbackContext context)
+    {
+        secondPlayerJump = true;
+    }
+    private void OnJumpStartCanceled(InputAction.CallbackContext context)
+    {
+        secondPlayerJump = false;
+    }
 
-   
 
     private void OnSprintStarted(InputAction.CallbackContext context) => sprintHeld = true;
     private void OnSprintCanceled(InputAction.CallbackContext context) => sprintHeld = false;
