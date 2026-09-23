@@ -9,6 +9,8 @@ public enum SecondPlayerState
     Airborne,
     Fall,
     Slip,
+    Aim,
+    Throw,
 }
 
 
@@ -21,6 +23,7 @@ public class PlayerSecondMovement : MonoBehaviour
     [Header("Essentials")]
     PlayerInputHandler inputHandler;
     CharacterController controller;
+    [SerializeField] GameObject head;
 
 
     [Header("Animation")]
@@ -53,7 +56,7 @@ public class PlayerSecondMovement : MonoBehaviour
     public bool jumping;
     public bool jumped;
     private float jumpTimer;
-    private const float JUMP_BUFFER_DURATION = 0.5f;
+    private const float JUMP_BUFFER_DURATION = 0.2f;
 
     [Header("Player Rotation")]
     Vector2 inputToRotate;
@@ -132,6 +135,10 @@ public class PlayerSecondMovement : MonoBehaviour
                 {
                     currentState = SecondPlayerState.Airborne;
                 }
+                if (inputHandler.aimed)
+                {
+                    currentState = SecondPlayerState.Aim;
+                }
                 break;
             case SecondPlayerState.Airborne:
                 jumped = false;
@@ -159,6 +166,36 @@ public class PlayerSecondMovement : MonoBehaviour
                     
                 }
                 break;
+            case SecondPlayerState.Aim:
+
+
+                if (!currentAnimation.IsName("2Aim"))
+                {
+                    movementHorizontal = Vector3.zero;
+                    playerVerticalVelocity = 0f;
+                    playerAnimator2.CrossFade("2Aim", 0f, 0, 0f);
+                }
+                HorizontalMovement();
+                if (inputHandler.throwed)
+                {
+                    currentState = SecondPlayerState.Throw;
+                }
+                break;
+            case SecondPlayerState.Throw:
+                inputHandler.throwed = false;
+                if (!currentAnimation.IsName("2Throw"))
+                {
+                    movementHorizontal = Vector3.zero;
+                    playerVerticalVelocity = 0f;
+                    playerAnimator2.CrossFade("2Throw", 0f, 0, 0f);
+                }
+
+                float animationPercentage2 = currentAnimation.normalizedTime % 1.0f;
+                if (currentAnimation.IsName("2Throw") && animationPercentage2 >= 0.16f)
+                {
+                    head.SetActive(false);
+                }
+                break;
         }
     }
     private void AnimatorCheck()
@@ -172,28 +209,39 @@ public class PlayerSecondMovement : MonoBehaviour
         float rotationAngle = inputAngle + transform.rotation.eulerAngles.y;
         Quaternion targetRotation = Quaternion.Euler(0f, rotationAngle, 0f);
         float angleDifference = Quaternion.Angle(transform.rotation, targetRotation);
-        if (angleDifference < 25f)
+        if(currentState== SecondPlayerState.Airborne)
         {
-            targetVelocity = transform.forward * inputHandler.moveInput.magnitude * moveSpeedMax;
-            movementHorizontal = Vector3.SmoothDamp(movementHorizontal, targetVelocity, ref smoothMoveVelocity, smoothTime, Mathf.Infinity, Time.fixedDeltaTime);
+            if (angleDifference < 25f)
+            {
+                targetVelocity = transform.forward * inputHandler.moveInput.magnitude * moveSpeedMax;
+                movementHorizontal = Vector3.SmoothDamp(movementHorizontal, targetVelocity, ref smoothMoveVelocity, smoothTime, Mathf.Infinity, Time.fixedDeltaTime);
+            }
+            if (angleDifference >= 25f && angleDifference < 50f)
+            {
+                transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRotation, rotationSpeed * Time.fixedDeltaTime);
+                targetVelocity = transform.forward * inputHandler.moveInput.magnitude * moveSpeedMax;
+                movementHorizontal = Vector3.SmoothDamp(movementHorizontal, targetVelocity, ref smoothMoveVelocity, smoothTime, Mathf.Infinity, Time.fixedDeltaTime);
+            }
+            else if (angleDifference < 130f && angleDifference > 50f)
+            {
+                transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRotation, rotationSpeed * Time.fixedDeltaTime);
+            }
+            else
+            {
+                Vector3 vel1 = transform.right * inputHandler.moveInput.x * moveSpeedMax;
+                Vector3 vel2 = transform.forward * inputHandler.moveInput.y * moveSpeedMax;
+                targetVelocity = vel1 + vel2;
+                movementHorizontal = Vector3.SmoothDamp(movementHorizontal, targetVelocity, ref smoothMoveVelocity, smoothTime, Mathf.Infinity, Time.fixedDeltaTime);
+            }
         }
-        if (angleDifference >= 25f&&angleDifference < 50f)
+        else if (currentState == SecondPlayerState.Aim)
         {
-            transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRotation, rotationSpeed * Time.fixedDeltaTime);
-            targetVelocity = transform.forward * inputHandler.moveInput.magnitude * moveSpeedMax;
-            movementHorizontal = Vector3.SmoothDamp(movementHorizontal, targetVelocity, ref smoothMoveVelocity, smoothTime, Mathf.Infinity, Time.fixedDeltaTime);
+            if (angleDifference < 130f && angleDifference > 50f)
+            {
+                transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRotation, rotationSpeed * Time.fixedDeltaTime);
+            }
         }
-        else if (angleDifference < 130f && angleDifference > 50f)
-        {
-            transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRotation, rotationSpeed * Time.fixedDeltaTime);
-        }
-        else
-        {
-            Vector3 vel1 = transform.right * inputHandler.moveInput.x * moveSpeedMax;
-            Vector3 vel2 = transform.forward * inputHandler.moveInput.y * moveSpeedMax;
-            targetVelocity = vel1 + vel2;
-            movementHorizontal = Vector3.SmoothDamp(movementHorizontal, targetVelocity, ref smoothMoveVelocity, smoothTime, Mathf.Infinity, Time.fixedDeltaTime);
-        }
+        
 
 
 
@@ -223,16 +271,17 @@ public class PlayerSecondMovement : MonoBehaviour
             if (jumping&&!jumped)
             {
                 //anim oynayacayak frame'e göre zýplayacak altta
-                playerAnimator2.CrossFade("2Jump", animationTransitionTime, 0, 0.0f);
+                playerAnimator2.CrossFade("2Jump", 0f, 0, 0.0f);
                 jumpTimer = JUMP_BUFFER_DURATION;
                 jumped = true;
 
             }
-            if (currentAnimation.IsName("2Jump") )
+
+            if (currentAnimation.IsName("2Jump") &&jumped )
             {
                 
                 float animationPercentage = currentAnimation.normalizedTime % 1.0f;
-                if (animationPercentage>= 0.35f)
+                if (animationPercentage>= 0.35f&&animationPercentage<=0.5f)
                 {
                     
                     playerVerticalVelocity = 0.2f * jumpPowerModifier;

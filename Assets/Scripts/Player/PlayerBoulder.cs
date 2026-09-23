@@ -85,6 +85,7 @@ public class PlayerBoulder : MonoBehaviour
         BoulderStateHandler();
         BoulderHorizontal();
         BoulderVertical();
+        Debug.Log(rb.linearVelocity.magnitude);
     }
     private void BoulderStateHandler()
     {

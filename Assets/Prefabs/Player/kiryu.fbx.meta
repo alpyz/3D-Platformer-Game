@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: 95f9f0a93cdfe584f8e3712bffd8a725
+guid: dc646803c7961e6408aa4045d4d75b88
 ModelImporter:
   serializedVersion: 24200
   internalIDToNameTable: []
@@ -31,18 +31,18 @@ ModelImporter:
     extraUserProperties: []
     clipAnimations:
     - serializedVersion: 16
-      name: skeleton|running_animation (1)
-      takeName: skeleton|running_animation
+      name: doubleJumping_animation
+      takeName: doubleJumping_animation
       internalID: -4002497341132357634
       firstFrame: 0
-      lastFrame: 22
+      lastFrame: 1
       wrapMode: 0
       orientationOffsetY: 0
       level: 0
       cycleOffset: 0
       loop: 0
       hasAdditiveReferencePose: 0
-      loopTime: 1
+      loopTime: 0
       loopBlend: 0
       loopBlendOrientation: 0
       loopBlendPositionY: 0
@@ -100,7 +100,7 @@ ModelImporter:
       cycleOffset: 0
       loop: 0
       hasAdditiveReferencePose: 0
-      loopTime: 0
+      loopTime: 1
       loopBlend: 0
       loopBlendOrientation: 0
       loopBlendPositionY: 0
@@ -121,7 +121,7 @@ ModelImporter:
       name: skeleton|doubleJumping_animation
       takeName: skeleton|doubleJumping_animation
       internalID: -3099431749302758521
-      firstFrame: 8.5
+      firstFrame: 8.7
       lastFrame: 32
       wrapMode: 0
       orientationOffsetY: 0
@@ -176,11 +176,11 @@ ModelImporter:
       maskSource: {instanceID: 0}
       additiveReferencePoseFrame: 0
     - serializedVersion: 16
-      name: skeleton|hanging_animation
-      takeName: skeleton|hanging_animation
-      internalID: 6203527277761093021
+      name: skeleton|headoff_animation
+      takeName: skeleton|headoff_animation
+      internalID: -2362012682378827668
       firstFrame: 0
-      lastFrame: 12
+      lastFrame: 29
       wrapMode: 0
       orientationOffsetY: 0
       level: 0
@@ -209,7 +209,7 @@ ModelImporter:
       takeName: skeleton|idle_animation
       internalID: -6387152896269455736
       firstFrame: 0
-      lastFrame: 4
+      lastFrame: 11
       wrapMode: 0
       orientationOffsetY: 0
       level: 0
@@ -321,11 +321,11 @@ ModelImporter:
       maskSource: {instanceID: 0}
       additiveReferencePoseFrame: 0
     - serializedVersion: 16
-      name: skeleton|vault_animation
-      takeName: skeleton|vault_animation
-      internalID: -2567737650884248409
+      name: skeleton|throw_animation
+      takeName: skeleton|throw_animation
+      internalID: 3793066015369422841
       firstFrame: 0
-      lastFrame: 26
+      lastFrame: 43
       wrapMode: 0
       orientationOffsetY: 0
       level: 0
@@ -350,9 +350,9 @@ ModelImporter:
       maskSource: {instanceID: 0}
       additiveReferencePoseFrame: 0
     - serializedVersion: 16
-      name: skeleton|vault_animation.001
-      takeName: skeleton|vault_animation.001
-      internalID: 3581181648784049968
+      name: skeleton|vault_animation
+      takeName: skeleton|vault_animation
+      internalID: -2567737650884248409
       firstFrame: 0
       lastFrame: 26
       wrapMode: 0

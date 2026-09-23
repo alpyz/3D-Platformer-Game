@@ -9,6 +9,9 @@ public enum MovementState
     Climbing,
     Sliding,
     Hanging,
+    Fall,
+    Aiming,
+    Throwing,
 }
 
 public class PlayerMovement : MonoBehaviour
@@ -16,6 +19,9 @@ public class PlayerMovement : MonoBehaviour
     [Header("Essentials")]
     PlayerInputHandler inputHandler;
     CharacterController controller;
+    [SerializeField] GameObject head;
+    [SerializeField] GameObject fakeHead;
+
 
     public MovementState currentState = MovementState.Grounded;
 
@@ -64,7 +70,10 @@ public class PlayerMovement : MonoBehaviour
     private float coyoteTimer;
     private const float JUMP_BUFFER_DURATION = 0.2f;
     private const float COYOTE_TIME_DURATION = 0.15f;
-    
+    private float hitTimer;
+    private const float HEAD_HIT_DURATION = 1f;
+    public bool hitHead;
+    public float rayCastDistance = 1f;
     [Header("Wall Jump")]
     public bool wallNearby;
     public float castSeperation = 4f;
@@ -145,6 +154,10 @@ public class PlayerMovement : MonoBehaviour
         if (wallJumpLockoutTimer > 0f)
         {
             wallJumpLockoutTimer -= Time.fixedDeltaTime;
+        }
+        if (hitTimer > 0)
+        {
+            hitTimer -= Time.fixedDeltaTime;
         }
 
         if (ledgeJumpLockoutTimer > 0f)
@@ -232,6 +245,10 @@ public class PlayerMovement : MonoBehaviour
                     }
                     currentState = MovementState.Airborne;
                 }
+                if (inputHandler.aimed)
+                {
+                    currentState = MovementState.Aiming;
+                }
                 break;
 
             case MovementState.Airborne:
@@ -267,6 +284,7 @@ public class PlayerMovement : MonoBehaviour
                 
                 if ((slopeAngle>climbAngle)&&wallNearby && runningTowardsWall && wallJumpLockoutTimer <= 0f)
                 {
+                    if (hitTimer > 0f) return;
                     playerVerticalVelocity = 0f;
                     currentState = MovementState.Climbing;
                 }
@@ -284,6 +302,10 @@ public class PlayerMovement : MonoBehaviour
                 break;
 
             case MovementState.Climbing:
+
+                
+
+
                 movementHorizontal = Vector3.zero;
                 jumpRemaining = 1;
                 Wallmovement();
@@ -332,7 +354,7 @@ public class PlayerMovement : MonoBehaviour
                 }
                 break;
             case MovementState.Hanging:
-
+                HeadHit();
                 jumpRemaining = 1;
                 if (canHang)
                 {
@@ -358,6 +380,62 @@ public class PlayerMovement : MonoBehaviour
                     jumpBufferTimer = 0f;
                     jumpTimerGoing = false;
 
+                }
+
+
+                break;
+            case MovementState.Fall:
+                VerticalMovement();
+                if (!currentAnimation.IsName("Idle"))
+                {
+                    playerAnimator.CrossFade("Idle", animationTransitionTime, 0);
+                }
+                if (controller.isGrounded)
+                {
+                    currentState= MovementState.Grounded;
+                }
+                break;
+            case MovementState.Aiming:
+                if (!currentAnimation.IsName("Aim"))
+                {
+                    movementHorizontal = Vector3.zero;
+                    playerVerticalVelocity = 0f;
+                    playerAnimator.CrossFade("Aim", 0f, 0, 0f);
+                }
+                float animationPercentage = currentAnimation.normalizedTime % 1.0f;
+                if (currentAnimation.IsName("Aim")&&animationPercentage>=0.45f)
+                {
+                    head.SetActive(false);
+                    fakeHead.SetActive(true);
+                }
+
+                if(jumpTimerGoing)
+                {
+                    head.SetActive(true);
+                    fakeHead.SetActive(false);
+                    inputHandler.ConsumeJumpPress();
+                    currentState = MovementState.Grounded;
+                }
+
+                if (inputHandler.throwed)
+                {
+                    currentState = MovementState.Throwing;
+                }
+
+                break;
+            case MovementState.Throwing:
+                inputHandler.throwed = false;
+                if (!currentAnimation.IsName("Throw"))
+                {
+                    movementHorizontal = Vector3.zero;
+                    playerVerticalVelocity = 0f;
+                    playerAnimator.CrossFade("Throw", 0f, 0, 0f);
+                }
+
+                float animationPercentage2 = currentAnimation.normalizedTime % 1.0f;
+                if (currentAnimation.IsName("Throw") && animationPercentage2 >= 0.45f)
+                {
+                    fakeHead.SetActive(false);
                 }
 
                 break;
@@ -480,7 +558,7 @@ public class PlayerMovement : MonoBehaviour
     {
 
 
-        if (currentState == MovementState.Airborne)
+        if (currentState == MovementState.Airborne|| currentState == MovementState.Fall)
         {
             jumpPower = 0f;
             playerVerticalVelocity -= gravitationalAcceleration * Time.fixedDeltaTime;
@@ -494,26 +572,39 @@ public class PlayerMovement : MonoBehaviour
         controller.Move(finalMovement * Time.fixedDeltaTime);
         jumpPower = Mathf.Clamp01(jumpPower);
 
+
+        HeadHit();
+
+    }
+
+
+    private void HeadHit()
+    {
         Vector3 worldControllerCenter = transform.TransformPoint(controller.center);
         Vector3 castOrigin = worldControllerCenter + sphereCastOffsetCeiling;
         RaycastHit hitCeiling;
-
-        if (Physics.SphereCast(castOrigin, controller.radius, transform.up, out hitCeiling, sphereCastHeightCeiling, climbable))
+        RaycastHit hitCeiling2;
+        hitHead = (Physics.SphereCast(castOrigin, controller.radius, transform.up, out hitCeiling, sphereCastHeightCeiling, climbable)) 
+            || (Physics.Raycast(castOrigin,  transform.up, out hitCeiling2,rayCastDistance , climbable));
+        if (hitHead)
         {
-            if (hitCeiling.normal.y < -0.5f)
-            {
+            
                 playerVerticalVelocity = groundedVerticalVelocity;
-            }
+
+                hitTimer = HEAD_HIT_DURATION;
+                currentState = MovementState.Fall;
+   
         }
-
-
     }
+
+
+
     private void Wallmovement()
     {
         if (currentAnimation.normalizedTime < 1 && currentAnimation.IsName("Hang")) return;
         if ((currentState == MovementState.Climbing || currentState == MovementState.Sliding) && jumpTimerGoing)
         {
-
+            
             playerAnimator.CrossFade("Jump", animationTransitionTime, 0);
             transform.rotation = transform.rotation * Quaternion.Euler(0, 180, 0);
             jumpRemaining = 0;
@@ -588,7 +679,11 @@ public class PlayerMovement : MonoBehaviour
                 sphereCastHitCount++;
 
             }
-            wallNearby = sphereCastHitCount > 0;
+            float angleDiff = Vector3.Dot(hitWall.normal, Vector3.up);
+            float dotproduct = Vector3.Dot(hitWall.normal, transform.forward);
+
+
+            wallNearby = sphereCastHitCount > 0 && angleDiff < 0.1736f; 
 
             if (wallNearby)
             {
@@ -597,8 +692,8 @@ public class PlayerMovement : MonoBehaviour
             }
             if (inputHandler.moveInput.magnitude > 0.01f && wallNearby)
             {
-                float dotproduct = Vector3.Dot(hitWall.normal, transform.forward);
-                runningTowardsWall = dotproduct < -0.7f;
+                
+                runningTowardsWall = dotproduct < -0.7f && angleDiff < 0.1736f;
                 wallOppositeDirectionClimb = -1f * hitWall.normal;
             }
             
@@ -618,7 +713,7 @@ public class PlayerMovement : MonoBehaviour
 
         castHitUpper = Physics.Raycast(castOrigin3, transform.forward, out hitLedgeUpper, castHeight, climbable);
 
-        canHang = !castHitUpper && castHitMiddle;
+        canHang = !castHitUpper && castHitMiddle&& wallNearby;
 
     }
 
